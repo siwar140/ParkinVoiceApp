@@ -1,0 +1,65 @@
+services:
+  # ============================================================
+  # BACKEND FASTAPI
+  # ============================================================
+  - type: web
+    name: parkinvoice-backend
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: parkinvoice-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "30"
+      - key: CORS_ORIGINS
+        value: "https://parkinvoice-frontend.onrender.com"
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: UPLOAD_DIR
+        value: "./uploads"
+      - key: MODEL_PATH
+        value: "./models_ia/parkinson_cnn+aug_off_weights_bst.h5"
+      - key: MODEL_KERAS_PATH
+        value: "./models_ia/parkinson_model.keras"
+      - key: RESEND_API_KEY
+        sync: false
+
+  # ============================================================
+  # FRONTEND REACT
+  # ============================================================
+  - type: web
+    name: parkinvoice-frontend
+    runtime: static
+    plan: free
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        value: "https://parkinvoice-backend.onrender.com/api"
+
+# ============================================================
+# BASE DE DONN�ES POSTGRESQL
+# ============================================================
+databases:
+  - name: parkinvoice-db
+    plan: free
+    databaseName: parkinvoice_db
+    user: parkinvoice_user
